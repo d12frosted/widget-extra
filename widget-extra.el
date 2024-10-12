@@ -34,7 +34,7 @@
 (require 'widget)
 (require 'wid-edit)
 
-;; * Title
+;;; * Title
 
 (defface widget-title '((t
                          :height 1.6
@@ -49,7 +49,7 @@
   :value-create (lambda (widget)
                   (insert (propertize (widget-get widget :value) 'face 'widget-title))))
 
-;; * Headings
+;;; * Headings
 
 (defface widget-heading-1 '((t
                              :height 1.4
@@ -77,7 +77,7 @@
   :value-create (lambda (widget)
                   (insert (propertize (widget-get widget :value) 'face 'widget-heading-2))))
 
-;; * Generic field
+;;; * Generic field
 
 (define-widget 'field 'default
   "A generic field widget."
@@ -116,7 +116,7 @@
   :value-get (lambda (widget &rest _) (widget-get widget :value))
   :prompt-value (lambda (_widget prompt _value _unbound) (read-string prompt)))
 
-;; * Integer field
+;;; * Integer field
 
 (define-widget 'int-field 'field
   "An integer field."
@@ -139,7 +139,7 @@
                                  (widget-get widget :min-value)
                                  (widget-get widget :max-value))))
 
-;; * Numeric field
+;;; * Numeric field
 
 (define-widget 'numeric-field 'field
   "A numeric field."
@@ -161,7 +161,85 @@
                                  (number-to-string (widget-get widget :min-value))
                                  (number-to-string (widget-get widget :max-value)))))
 
-;; * Buffer setup
+;;; * Horizontal choice
+
+(define-widget 'horizontal-choice 'default
+  "Select one of multiple options in a horizontal layout."
+  :convert-widget 'widget-types-convert-widget
+  :copy 'widget-types-copy
+  :offset 4
+  :format "%v\n"
+  :entry-format "%v"
+  :value-create 'widget-horizontal-choice-value-create
+  :value-get 'widget-horizontal-choice-value-get
+  :value-set 'widget-horizontal-choice-value-set
+  :error "You must push one of the buttons")
+
+(defun widget-horizontal-choice-value-create (widget)
+  "Expand %v by inserting all values for horizontal choice WIDGET."
+  (seq-map-indexed
+   (lambda (item index)
+     (widget-horizontal-choice-add-item widget item index))
+   (widget-get widget :values)))
+
+(defun widget-horizontal-choice-add-item (widget item index)
+  "Add an ITEM with INDEX to horizontal choice WIDGET."
+  (and (widget--should-indent-p)
+       (widget-get widget :indent)
+       (insert-char ?\s (widget-get widget :indent)))
+  (widget-specify-insert
+   (let* ((buttons (widget-get widget :buttons))
+	  (from (point))
+          (choice (widget-get widget :choice))
+	  (chosen (if choice
+                      (= choice index)
+                    (equal item (widget-get widget :value))))
+	  button)
+     (insert (widget-get widget :entry-format))
+     (goto-char from)
+     ;; Parse % escapes in format.
+     (while (re-search-forward "%\\([v%]\\)" nil t)
+       (let ((escape (char-after (match-beginning 1))))
+	 (delete-char -2)
+	 (cond ((eq escape ?%)
+		(insert ?%))
+	       ((eq escape ?v)
+                (setq button (widget-create-child
+                              widget
+                              (list
+                               'push-button
+                               :format (if (> index 0) " %[%v%]" "%[%v%]")
+                               :notify (lambda (&rest _)
+                                         (widget-horizontal-choice-value-set widget index))
+                               :index index
+                               :value item)))
+		(when chosen
+		  (widget-apply button :deactivate)))
+	       (t
+		(error "Unknown escape `%c'" escape)))))
+     (when chosen
+       (widget-put widget :choice index)
+       (widget-put widget :value item))
+     (when button
+       (widget-put widget :buttons (nconc buttons (list button))))
+     button)))
+
+(defun widget-horizontal-choice-value-get (widget)
+  "Get selected value of a horizontal choice WIDGET."
+  (nth (or (widget-get widget :choice) 0)
+       (widget-get widget :values)))
+
+(defun widget-horizontal-choice-value-set (widget index)
+  "Set selected INDEX in horizontal choice WIDGET."
+  (widget-put widget :choice index)
+  (widget-put widget :value (widget-horizontal-choice-value-get widget))
+  (dolist (button (widget-get widget :buttons))
+      (if (= (widget-get button :index) index)
+          (widget-apply button :deactivate)
+        (widget-apply button :activate)))
+  (widget-apply widget :notify))
+
+;;; * Buffer setup
 
 (defmacro widget-buffer-setup (buffer-or-name &rest body)
   "Setup a clean buffer for widgets usage.

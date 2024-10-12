@@ -9,7 +9,8 @@ A few extensions to the Emacs widgets library.
 - `int-field` - an integer field.
 - `bounded-int-field` - a bounded integer field. Min/max values are controlled by `:min-value` and `:max-value` properties.
 - `numeric-field` - a generic numeric field.
-- `-bounded-numeric-field` - a generic bounded numeric field. Min/max values are controlled by `:min-value` and `:max-value` properties.
+- `bounded-numeric-field` - a generic bounded numeric field. Min/max values are controlled by `:min-value` and `:max-value` properties.
+- `horizontal-choice` - a simple horizontal choice / tabs-like widget.
 
 See definition of each widget to learn more about them.
 
