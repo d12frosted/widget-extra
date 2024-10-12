@@ -40,7 +40,8 @@
                          :height 1.6
                          :weight extra-bold))
   "Face used for title."
-  :group 'help)
+  :group 'widgets
+  :group 'faces)
 
 (define-widget 'title 'item
   "A title widget."
@@ -54,7 +55,8 @@
                              :height 1.4
                              :weight bold))
   "Face used for level 1 heading."
-  :group 'help)
+  :group 'widgets
+  :group 'faces)
 
 (define-widget 'heading-1 'item
   "A level 1 heading widget."
@@ -66,7 +68,8 @@
                              :height 1.2
                              :weight semi-bold))
   "Face used for level 2 heading."
-  :group 'help)
+  :group 'widgets
+  :group 'faces)
 
 (define-widget 'heading-2 'item
   "A level 2 heading widget."
