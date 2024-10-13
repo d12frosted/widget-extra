@@ -168,6 +168,40 @@
                                  (number-to-string (widget-get widget :min-value))
                                  (number-to-string (widget-get widget :max-value)))))
 
+;;; * Fields group
+
+(define-widget 'fields-group 'default
+  "Group multiple fields into one widget.
+
+It automatically aligns values of the child fields."
+  :convert-widget #'widget-types-convert-widget
+  :copy #'widget-types-copy
+  :format "%v"
+  :extra-offset 1
+  :value-create #'widget-fields-group-value-create)
+
+(defun widget-fields-group-value-create (widget)
+  "Expand %v by inserting all children of the WIDGET."
+  (let* ((args (widget-get widget :args))
+         (max-tag-length (seq-max
+                          (seq-map
+                           (lambda (x) (length (or (widget-get x :tag) "")))
+                           args))))
+    (dolist (arg args)
+      (widget-fields-group-add-item widget arg max-tag-length))))
+
+(defun widget-fields-group-add-item (widget item max-tag-length)
+  "Add ITEM to WIDGET.
+
+Use MAX-TAG-LENGTH to calculate offset."
+  (let* ((tag (widget-get item :tag))
+         (tag-length (if tag (length tag) 0))
+         (offset (+ (widget-get widget :extra-offset)
+                    (- max-tag-length tag-length))))
+    (widget-put item :format "%T%[%v%]\n")
+    (widget-put item :offset offset)
+    (widget-create-child widget item)))
+
 ;;; * Horizontal choice
 
 (define-widget 'horizontal-choice 'default
