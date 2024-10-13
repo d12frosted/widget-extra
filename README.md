@@ -2,6 +2,7 @@ A few extensions to the Emacs widgets library.
 
 ## Widgets
 
+- `label` - a simple label widget (item widget with extra functionality).
 - `title` - a title; uses `widget-title` face.
 - `heading-1` - a level 1 heading; uses `widget-heading-1` face.
 - `heading-2` - a level 2 heading; uses `widget-heading-2` face.

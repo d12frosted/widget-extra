@@ -34,6 +34,29 @@
 (require 'widget)
 (require 'wid-edit)
 
+;;; * Generic label
+
+(define-widget 'label 'item
+  "A generic label."
+  :face 'default
+  :tag-face 'default
+  :offset 1
+  :format "%T%v"
+  :format-handler
+  (lambda (widget escape)
+    ;; we support custom tag prefix (optional + offsets)
+    (cond ((eq escape ?T)
+           (when-let ((tag (widget-get widget :tag))
+                      (offset (widget-get widget :offset)))
+             (insert (propertize tag 'face (widget-get widget :tag-face))
+                     (make-string offset ?\s))))))
+  :format-value (lambda (_widget value) value)
+  :value-create
+  (lambda (widget)
+    (insert (propertize
+             (widget-apply widget :format-value (widget-get widget :value))
+             'face (widget-get widget :face)))))
+
 ;;; * Title
 
 (defface widget-title '((t
@@ -43,11 +66,10 @@
   :group 'widgets
   :group 'faces)
 
-(define-widget 'title 'item
+(define-widget 'title 'label
   "A title widget."
   :format "%v\n"
-  :value-create (lambda (widget)
-                  (insert (propertize (widget-get widget :value) 'face 'widget-title))))
+  :face 'widget-title)
 
 ;;; * Headings
 
@@ -58,11 +80,10 @@
   :group 'widgets
   :group 'faces)
 
-(define-widget 'heading-1 'item
+(define-widget 'heading-1 'label
   "A level 1 heading widget."
   :format "%v\n"
-  :value-create (lambda (widget)
-                  (insert (propertize (widget-get widget :value) 'face 'widget-heading-1))))
+  :face 'widget-heading-1)
 
 (defface widget-heading-2 '((t
                              :height 1.2
@@ -71,11 +92,10 @@
   :group 'widgets
   :group 'faces)
 
-(define-widget 'heading-2 'item
+(define-widget 'heading-2 'label
   "A level 2 heading widget."
   :format "%v\n"
-  :value-create (lambda (widget)
-                  (insert (propertize (widget-get widget :value) 'face 'widget-heading-2))))
+  :face 'widget-heading-2)
 
 ;;; * Generic field
 
