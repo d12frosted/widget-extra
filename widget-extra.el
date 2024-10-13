@@ -180,7 +180,7 @@ The current value (as well as initial) is stored in :value property of
 the widget."
   :convert-widget 'widget-types-convert-widget
   :copy 'widget-types-copy
-  :offset 4
+  :gap 1
   :format "%v\n"
   :entry-format "%v"
   :value-create 'widget-horizontal-choice-value-create
@@ -207,6 +207,7 @@ the widget."
 	  (chosen (if choice
                       (= choice index)
                     (equal item (widget-get widget :value))))
+          (gap (make-string (widget-get widget :gap) ?\s))
 	  button)
      (insert (widget-get widget :entry-format))
      (goto-char from)
@@ -221,7 +222,7 @@ the widget."
                               widget
                               (list
                                'push-button
-                               :format (if (> index 0) " %[%v%]" "%[%v%]")
+                               :format (if (> index 0) (concat gap "%[%v%]") "%[%v%]")
                                :notify (lambda (&rest _)
                                          (widget-horizontal-choice-value-set widget item))
                                :index index
