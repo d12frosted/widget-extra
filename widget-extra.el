@@ -83,7 +83,15 @@
   "A generic field widget."
   :prompt "Value: "
   :unbound nil
-  :format "%[%v%]"
+  :offset 1
+  :format "%T%[%v%]"
+  :format-handler
+  (lambda (widget escape)
+    ;; we support custom tag prefix (optional + offsets)
+    (cond ((eq escape ?T)
+           (when-let ((tag (widget-get widget :tag))
+                      (offset (widget-get widget :offset)))
+             (insert tag (make-string offset ?\s))))))
   :match (lambda (_widget _value) t)
   :match-error-message (lambda (widget _value)
                          (format "Value does not match %S type" (car widget)))
@@ -103,7 +111,6 @@
       (widget-apply widget :notify widget event)
       (run-hook-with-args 'widget-edit-functions widget)))
   :mouse-down-action 'widget-choice-mouse-down-action
-
   :format-value (lambda (_widget value) value)
   :value-create
   (lambda (widget &rest _)
