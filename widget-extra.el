@@ -164,7 +164,13 @@
 ;;; * Horizontal choice
 
 (define-widget 'horizontal-choice 'default
-  "Select one of multiple options in a horizontal layout."
+  "Select one of multiple options in a horizontal layout.
+
+This widget creates a buttons for each value in :values and uses
+horizontal layout to place them.
+
+The current value (as well as initial) is stored in :value property of
+the widget."
   :convert-widget 'widget-types-convert-widget
   :copy 'widget-types-copy
   :offset 4
@@ -210,7 +216,7 @@
                                'push-button
                                :format (if (> index 0) " %[%v%]" "%[%v%]")
                                :notify (lambda (&rest _)
-                                         (widget-horizontal-choice-value-set widget index))
+                                         (widget-horizontal-choice-value-set widget item))
                                :index index
                                :value item)))
 		(when chosen
@@ -226,16 +232,19 @@
 
 (defun widget-horizontal-choice-value-get (widget)
   "Get selected value of a horizontal choice WIDGET."
-  (nth (or (widget-get widget :choice) 0)
-       (widget-get widget :values)))
+  (if-let ((index (widget-get widget :choice)))
+      (nth index (widget-get widget :values))))
 
-(defun widget-horizontal-choice-value-set (widget index)
-  "Set selected INDEX in horizontal choice WIDGET."
-  (widget-put widget :choice index)
-  (widget-put widget :value (widget-horizontal-choice-value-get widget))
+(defun widget-horizontal-choice-value-set (widget value)
+  "Set selected VALUE in horizontal choice WIDGET."
+  (widget-put widget :value nil)
+  (widget-put widget :choice nil)
   (dolist (button (widget-get widget :buttons))
-      (if (= (widget-get button :index) index)
-          (widget-apply button :deactivate)
+    (if (string= (widget-get button :value) value)
+        (progn
+          (widget-put widget :choice (widget-get button :index))
+          (widget-put widget :value (widget-get button :value))
+          (widget-apply button :deactivate))
         (widget-apply button :activate)))
   (widget-apply widget :notify))
 
