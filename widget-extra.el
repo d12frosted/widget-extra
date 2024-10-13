@@ -110,7 +110,7 @@
       (widget-setup)
       (widget-apply widget :notify widget event)
       (run-hook-with-args 'widget-edit-functions widget)))
-  :mouse-down-action 'widget-choice-mouse-down-action
+  :mouse-down-action #'widget-choice-mouse-down-action
   :format-value (lambda (_widget value) value)
   :value-create
   (lambda (widget &rest _)
@@ -178,14 +178,14 @@ horizontal layout to place them.
 
 The current value (as well as initial) is stored in :value property of
 the widget."
-  :convert-widget 'widget-types-convert-widget
-  :copy 'widget-types-copy
+  :convert-widget #'widget-types-convert-widget
+  :copy #'widget-types-copy
   :gap 1
   :format "%v\n"
   :entry-format "%v"
-  :value-create 'widget-horizontal-choice-value-create
-  :value-get 'widget-horizontal-choice-value-get
-  :value-set 'widget-horizontal-choice-value-set
+  :value-create #'widget-horizontal-choice-value-create
+  :value-get #'widget-horizontal-choice-value-get
+  :value-set #'widget-horizontal-choice-value-set
   :error "You must push one of the buttons")
 
 (defun widget-horizontal-choice-value-create (widget)
