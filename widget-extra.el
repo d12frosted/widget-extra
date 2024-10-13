@@ -57,6 +57,12 @@
              (widget-apply widget :format-value (widget-get widget :value))
              'face (widget-get widget :face)))))
 
+;;; * Numeric labels
+
+(define-widget 'numeric-label 'label
+  "A numeric label."
+  :format-value (lambda (_widget value) (number-to-string value)))
+
 ;;; * Title
 
 (defface widget-title '((t
