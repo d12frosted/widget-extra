@@ -41,21 +41,27 @@
   :face 'default
   :tag-face 'default
   :offset 1
+  :padding ?\s
+  ;; note - only value is truncated as tags are generally static hence there is no need to truncate them
+  :truncate nil
   :format "%T%v"
   :format-handler
   (lambda (widget escape)
     ;; we support custom tag prefix (optional + offsets)
     (cond ((eq escape ?T)
-           (when-let ((tag (widget-get widget :tag))
-                      (offset (widget-get widget :offset)))
-             (insert (propertize tag 'face (widget-get widget :tag-face))
-                     (make-string offset ?\s))))))
+           (when-let ((tag (widget-get widget :tag)))
+             (let ((offset (widget-get widget :offset)))
+               (insert (propertize tag 'face (widget-get widget :tag-face))
+                       (make-string offset (widget-get widget :padding))))))))
   :format-value (lambda (_widget value) value)
   :value-create
   (lambda (widget)
-    (insert (propertize
-             (widget-apply widget :format-value (widget-get widget :value))
-             'face (widget-get widget :face)))))
+    (let* ((s (widget-apply widget :format-value (widget-get widget :value)))
+           (truncate (widget-get widget :truncate)))
+      (insert
+       (propertize
+        (if truncate (s-truncate truncate s) s)
+        'face (widget-get widget :face))))))
 
 ;;; * Numeric labels
 
