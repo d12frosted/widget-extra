@@ -14,6 +14,7 @@ A few extensions to the Emacs widgets library.
 - `bounded-numeric-field` - a generic bounded numeric field. Min/max values are controlled by `:min-value` and `:max-value` properties.
 - `fields-group` - a widget to group and automatically align/offset fields.
 - `horizontal-choice` - a simple horizontal choice / tabs-like widget.
+- `table` - a simple table widget that supports custom padding, truncation (works only with `label`- and `field`-derived widgets) and automatic resize on content change.
 
 See definition of each widget to learn more about them.
 

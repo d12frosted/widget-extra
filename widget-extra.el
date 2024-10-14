@@ -6,7 +6,7 @@
 ;; Maintainer: Boris Buliga <boris@d12frosted.io>
 ;; URL: https://github.com/d12frosted/widget-extra
 ;; Version: 1.0.0
-;; Package-Requires: ((emacs "29.1"))
+;; Package-Requires: ((emacs "29.1") (dash "2.19.1") (s "1.13.0"))
 ;; Keywords: extensions
 
 ;; This file is not part of GNU Emacs.
@@ -33,6 +33,8 @@
 
 (require 'widget)
 (require 'wid-edit)
+(require 'dash)
+(require 's)
 
 ;;; * Generic label
 
@@ -329,6 +331,141 @@ the widget."
           (widget-apply button :deactivate))
         (widget-apply button :activate)))
   (widget-apply widget :notify))
+
+;;; * Table widget
+
+(define-widget 'table 'default
+  "A table widget.
+
+Arguments are of types:
+
+- hline - an empty line/separator controlled by :hline-* properties; by
+  itself has not properties.
+
+- row - actual content of the table; controlled by :row-* properties.
+  Arguments are other widgets (multi-line widgets are not really
+  supported). The only extra property it supports is :padding-type to
+  override table :padding-type."
+  :convert-widget #'widget-types-convert-widget
+  :copy #'widget-types-copy
+  :format "%v"
+  :row-start "| "
+  :row-conj " | "
+  :row-end " |"
+  :padding ?\s
+  ;; either a symbol (right or left) or alist of column index to padding type
+  :padding-type 'right
+  ;; either nil (unbounded or alist of column index to max width); works only with widgets that support :truncate
+  ;; property
+  :truncate nil
+  :hline-start "|-"
+  :hline-content ?-
+  :hline-conj "-+-"
+  :hline-end "-|"
+  :value-create #'widget-table-value-create
+  :notify (lambda (widget child &optional _event)
+            (let* ((child-new (widget-copy child))
+                   (row-index (widget-get child-new :row-index))
+                   (col-index (widget-get child-new :col-index))
+                   (child-from (marker-position (widget-get child :from)))
+                   (delta (when child-from (- (point) child-from))))
+              (widget-put
+               widget :args
+               (--update-at
+                row-index
+                (progn
+                  (widget-put
+                   it :args
+                   (-replace-at col-index child-new (widget-get it :args)))
+                  it)
+                (widget-get widget :args)))
+              (widget-default-value-set widget (widget-get widget :value))
+              ;; properly move point after full recreation of table widget
+              (when-let ((child (--find (and (= row-index (widget-get it :row-index))
+                                             (= col-index (widget-get it :col-index)))
+                                        (widget-get widget :children))))
+                (when delta
+                  (goto-char (+ (widget-get child :from) delta)))))))
+
+(defun widget-table-value-create (widget)
+  "Expand %v by inserting all children of the WIDGET."
+  (let* ((args (widget-get widget :args))
+         (truncate (widget-get widget :truncate))
+         (cols (->> args
+                    (--map (widget-get it :args))
+                    (-map #'length)
+                    (-max)))
+         (widths (->> (-iota cols)
+                      ;; transpose operation
+                      (-map
+                       (lambda (i)
+                         (-map (-partial #'nth i) (--map (widget-get it :args) args))))
+                      ;; calculate length of each column
+                      (--map-indexed
+                       (let ((max-width (alist-get it-index truncate)))
+                         (--map
+                          (if-let ((length (when it
+                                             (with-temp-buffer
+                                               (widget-create it)
+                                               (- (point) 1)))))
+                              (if max-width (min max-width length) length)
+                            0)
+                          it))
+                       )))
+         (max-widths (-map #'-max widths))
+         (children))
+    (-each-indexed args
+      (lambda (row-index row)
+        (pcase (car row)
+          ;; regular row
+          (`row
+           (widget-insert (widget-get widget :row-start))
+           (-each-indexed (widget-get row :args)
+             (lambda (col-index col)
+               (unless (= 0 col-index)
+                 (widget-insert (widget-get widget :row-conj)))
+               (widget-put col :row-index row-index)
+               (widget-put col :col-index col-index)
+               (let* ((w (nth row-index (nth col-index widths)))
+                      (mw (nth col-index max-widths))
+                      (pad-type (or (widget-get row :padding-type)
+                                    (widget-get widget :padding-type)))
+                      (pad-type (when (and pad-type (listp pad-type))
+                                  (alist-get col-index pad-type)))
+                      (pad-type (or pad-type 'right))
+                      (pad (- mw w))
+                      (truncate (widget-get widget :truncate))
+                      (col (widget-copy col)))
+                 (when (and (> pad 0) (eq pad-type 'left))
+                   (widget-insert (make-string pad (widget-get widget :padding))))
+                 (widget-put col :truncate (alist-get col-index truncate))
+                 (setq children (cons (widget-create-child widget col) children))
+                 (when (and (> pad 0) (eq pad-type 'right))
+                   (widget-insert (make-string pad (widget-get widget :padding)))))))
+           (let ((cols-in-row (length (widget-get row :args))))
+             (--each (-iota (- cols cols-in-row))
+               (widget-insert
+                (widget-get widget :row-conj)
+                (make-string (nth (+ it cols-in-row) max-widths) ?\s))))
+           (widget-insert (widget-get widget :row-end) "\n"))
+
+          ;; horizontal line
+          (`hline
+           (widget-insert (widget-get widget :hline-start))
+           (--each (-iota cols)
+             (unless (= it 0)
+               (widget-insert (widget-get widget :hline-conj)))
+             (widget-insert
+              (make-string
+               (nth it max-widths)
+               (widget-get widget :hline-content))))
+           (widget-insert (widget-get widget :hline-end) "\n"))
+
+          ;; unsupported types
+          (type (user-error "Unsupported type %S" type)))
+        (widget-put widget :children (reverse children))))))
+
+(defun widget-table-insert-decoration ())
 
 ;;; * Buffer setup
 

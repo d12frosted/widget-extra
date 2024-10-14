@@ -12,6 +12,8 @@
 (source "gnu")
 
 (depends-on "emacs" "29.1")
+(depends-on "dash" "2.19.1")
+(depends-on "s" "1.13.0")
 
 (add-hook 'eask-before-compile-hook
            (lambda ()
