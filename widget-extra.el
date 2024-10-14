@@ -114,8 +114,12 @@
 (define-widget 'field 'default
   "A generic field widget."
   :prompt "Value: "
+  :tag-face 'default
   :unbound nil
   :offset 1
+  :padding ?\s
+  ;; note - only value is truncated as tags are generally static hence there is no need to truncate them
+  :truncate nil
   :format "%T%[%v%]"
   :format-handler
   (lambda (widget escape)
@@ -123,7 +127,8 @@
     (cond ((eq escape ?T)
            (when-let ((tag (widget-get widget :tag))
                       (offset (widget-get widget :offset)))
-             (insert tag (make-string offset ?\s))))))
+             (insert (propertize tag 'face (widget-get widget :tag-face))
+                     (make-string offset (widget-get widget :padding)))))))
   :match (lambda (_widget _value) t)
   :match-error-message (lambda (widget _value)
                          (format "Value does not match %S type" (car widget)))
@@ -141,15 +146,18 @@
       (widget-value-set widget value)
       (widget-setup)
       (widget-apply widget :notify widget event)
+      (widget-default-action widget event)
       (run-hook-with-args 'widget-edit-functions widget)))
   :mouse-down-action #'widget-choice-mouse-down-action
   :format-value (lambda (_widget value) value)
   :value-create
   (lambda (widget &rest _)
     (let* ((value (widget-get widget :value))
+           (truncate (widget-get widget :truncate))
            (tag (if value
                     (widget-apply widget :format-value value)
                   (widget-get widget :void)))
+           (tag (if truncate (s-truncate truncate tag) tag))
            (current `(item :tag ,tag :value ,value :format ,(widget-get widget :child-format))))
       (widget-put widget :children (list (widget-create-child-value widget current value)))))
   :value-get (lambda (widget &rest _) (widget-get widget :value))
