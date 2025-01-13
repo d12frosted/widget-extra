@@ -239,8 +239,11 @@ Use MAX-TAG-LENGTH to calculate offset."
   (let* ((tag (widget-get item :tag))
          (tag-length (if tag (length tag) 0))
          (offset (+ (widget-get widget :extra-offset)
-                    (- max-tag-length tag-length))))
-    (widget-put item :format "%T%[%v%]\n")
+                    (- max-tag-length tag-length)))
+         (format (or (widget-get item :format)
+                     "%T%[%v%]"))
+         (format (if (s-ends-with-p "\n" format) format (concat format "\n"))))
+    (widget-put item :format format)
     (widget-put item :offset offset)
     (widget-create-child widget item)))
 
