@@ -40,6 +40,7 @@
 
 (define-widget 'label 'item
   "A generic label."
+  ;; can be face or function from widget and value to face
   :face 'default
   :tag-face 'default
   :offset 1
@@ -59,11 +60,11 @@
   :value-create
   (lambda (widget)
     (let* ((s (widget-apply widget :format-value (widget-get widget :value)))
-           (truncate (widget-get widget :truncate)))
-      (insert
-       (propertize
-        (if truncate (s-truncate truncate s) s)
-        'face (widget-get widget :face))))))
+           (truncate (widget-get widget :truncate))
+           (face (widget-get widget :face)))
+      (when (functionp face)
+        (setq face (widget-apply widget :face (widget-get widget :value))))
+      (insert (propertize (if truncate (s-truncate truncate s) s) 'face face)))))
 
 ;;; * Numeric labels
 
