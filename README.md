@@ -26,13 +26,16 @@ See definition of each widget to learn more about them.
 
 ```sh
 # install deps
-eask install-deps
+make prepare
 
 # compile
-eask compile
+make compile
 
 # lint
-eask lint package
+make lint
+
+# test
+make test
 ```
 
 This project was bootstrapped with [eask/cli](https://github.com/emacs-eask/cli).
