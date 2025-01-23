@@ -37,5 +37,3 @@ make lint
 # test
 make test
 ```
-
-This project was bootstrapped with [eask/cli](https://github.com/emacs-eask/cli).
