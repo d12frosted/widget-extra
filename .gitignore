@@ -15,3 +15,7 @@ dist/
 # packaging
 *-autoloads.el
 *-pkg.el
+
+# Added automatically by ‘eldev init’.
+/.eldev
+/Eldev-local

@@ -40,14 +40,17 @@ jobs:
       with:
         version: ${{ matrix.emacs-version }}
 
-    - uses: emacs-eask/setup-eask@master
-      with:
-        version: 'snapshot'
+    - name: Install Eldev
+      uses: emacs-eldev/setup-eldev@v1
 
-    - name: Run tests
-      run: |
-        eask clean all
-        eask package
-        eask install
-        eask lint package
-        eask compile
+    - name: Install dependencies
+      run: make prepare
+
+    - name: Lint
+      run: make lint
+
+    - name: Compile
+      run: make compile
+
+    - name: Test
+      run: make test
