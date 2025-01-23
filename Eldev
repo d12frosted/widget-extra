@@ -11,6 +11,5 @@
 ;;
 ;; Additionally, there appears to be no way to distinguish between standard functions and widgets.
 (with-eval-after-load 'package-lint
-  (defun package-lint--get-package-prefix ()
-    "Return empty string."
-    ""))
+  (defun package-lint--check-defs-prefix (_prefix _definitions)
+    "Verify that symbol DEFINITIONS start with package PREFIX."))
