@@ -414,8 +414,7 @@ Arguments are of types:
                                                (- (point) 1)))))
                               (if max-width (min max-width length) length)
                             0)
-                          it))
-                       )))
+                          it)))))
          (max-widths (-map #'-max widths))
          (children))
     (-each-indexed args
@@ -468,8 +467,6 @@ Arguments are of types:
           ;; unsupported types
           (type (user-error "Unsupported type %S" type)))
         (widget-put widget :children (reverse children))))))
-
-(defun widget-table-insert-decoration ())
 
 ;;; * Buffer setup
 
