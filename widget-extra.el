@@ -1,6 +1,6 @@
 ;;; widget-extra.el --- Extra widgets that extend built-in library  -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024  Boris Buliga
+;; Copyright (C) 2024-2025  Boris Buliga
 
 ;; Author: Boris Buliga <boris@d12frosted.io>
 ;; Maintainer: Boris Buliga <boris@d12frosted.io>
@@ -26,7 +26,40 @@
 
 ;;; Commentary:
 ;;
-;; Extra widgets that extend built-in library.
+;; This package provides additional widgets that extend Emacs' built-in
+;; widget library (wid-edit.el). These widgets are designed to make it
+;; easier to build interactive buffer-based UIs in Emacs.
+;;
+;; Widgets provided:
+;;
+;; Labels (read-only display):
+;;   - `label'         - generic label with face, tag, truncation support
+;;   - `numeric-label' - label that formats numeric values
+;;   - `title'         - large title text (uses `widget-title' face)
+;;   - `heading-1'     - level 1 heading (uses `widget-heading-1' face)
+;;   - `heading-2'     - level 2 heading (uses `widget-heading-2' face)
+;;
+;; Fields (editable via click/RET):
+;;   - `field'                 - generic string field
+;;   - `int-field'             - integer field
+;;   - `bounded-int-field'     - integer with min/max bounds
+;;   - `numeric-field'         - any number field
+;;   - `bounded-numeric-field' - number with min/max bounds
+;;
+;; Layout widgets:
+;;   - `fields-group'      - groups fields with automatic tag alignment
+;;   - `horizontal-choice' - horizontal tabs/button group
+;;   - `table'             - table with rows, columns, and separators
+;;
+;; Utilities:
+;;   - `widget-buffer-setup' - macro for initializing widget buffers
+;;
+;; Basic usage:
+;;
+;;   (widget-buffer-setup "*my-ui*"
+;;     (widget-create 'title "My Application")
+;;     (widget-create 'heading-1 "Settings")
+;;     (widget-create 'field :tag "Name:" :value "default"))
 ;;
 
 ;;; Code:
@@ -38,9 +71,24 @@
 
 ;;; * Generic label
 
+;;;###autoload
 (define-widget 'label 'item
-  "A generic label."
-  ;; can be face or function from widget and value to face
+  "A generic label widget for displaying read-only text.
+
+Properties:
+  :face       - face for the value (symbol or function taking widget and value)
+  :tag-face   - face for the tag
+  :tag        - optional prefix label
+  :offset     - spacing between tag and value (default 1)
+  :padding    - padding character (default space)
+  :truncate   - max length for value (nil for no truncation)
+  :format     - format string (default \"%T%v\")
+
+The %T escape in format inserts the tag with offset.
+
+Example:
+  (widget-create \\='label :tag \"Name:\" :value \"Boris\")
+  (widget-create \\='label :truncate 10 :value \"A very long string\")"
   :face 'default
   :tag-face 'default
   :offset 1
@@ -68,8 +116,15 @@
 
 ;;; * Numeric labels
 
+;;;###autoload
 (define-widget 'numeric-label 'label
-  "A numeric label."
+  "A label widget that displays numeric values.
+
+Inherits all properties from `label'.
+Automatically converts numeric values to strings for display.
+
+Example:
+  (widget-create \\='numeric-label :tag \"Count:\" :value 42)"
   :format-value (lambda (_widget value) (number-to-string value)))
 
 ;;; * Title
@@ -81,8 +136,15 @@
   :group 'widgets
   :group 'faces)
 
+;;;###autoload
 (define-widget 'title 'label
-  "A title widget."
+  "A large title widget using `widget-title' face.
+
+Displays text with extra-bold weight and 1.6x height.
+Automatically adds a newline after the value.
+
+Example:
+  (widget-create \\='title \"My Application\")"
   :format "%v\n"
   :face 'widget-title)
 
@@ -95,8 +157,15 @@
   :group 'widgets
   :group 'faces)
 
+;;;###autoload
 (define-widget 'heading-1 'label
-  "A level 1 heading widget."
+  "A level 1 heading widget using `widget-heading-1' face.
+
+Displays text with bold weight and 1.4x height.
+Automatically adds a newline after the value.
+
+Example:
+  (widget-create \\='heading-1 \"Section Title\")"
   :format "%v\n"
   :face 'widget-heading-1)
 
@@ -107,15 +176,41 @@
   :group 'widgets
   :group 'faces)
 
+;;;###autoload
 (define-widget 'heading-2 'label
-  "A level 2 heading widget."
+  "A level 2 heading widget using `widget-heading-2' face.
+
+Displays text with semi-bold weight and 1.2x height.
+Automatically adds a newline after the value.
+
+Example:
+  (widget-create \\='heading-2 \"Subsection Title\")"
   :format "%v\n"
   :face 'widget-heading-2)
 
 ;;; * Generic field
 
+;;;###autoload
 (define-widget 'field 'default
-  "A generic field widget."
+  "A generic editable field widget.
+
+Click or press RET on the field to edit its value via the minibuffer.
+
+Properties:
+  :value      - current field value
+  :prompt     - minibuffer prompt (default \"Value: \")
+  :tag        - optional prefix label
+  :tag-face   - face for the tag
+  :offset     - spacing between tag and value (default 1)
+  :padding    - padding character (default space)
+  :truncate   - max display length (nil for no truncation)
+  :void       - placeholder when value is nil (default \"__\")
+  :notify     - function called when value changes
+
+Example:
+  (widget-create \\='field :tag \"Name:\" :value \"Boris\"
+                 :notify (lambda (widget &rest _)
+                           (message \"New value: %s\" (widget-value widget))))"
   :prompt "Value: "
   :tag-face 'default
   :unbound nil
@@ -168,16 +263,37 @@
 
 ;;; * Integer field
 
+;;;###autoload
 (define-widget 'int-field 'field
-  "An integer field."
+  "An editable integer field.
+
+Inherits all properties from `field'.
+Only accepts integer values; signals error otherwise.
+
+Example:
+  (widget-create \\='int-field :tag \"Age:\" :value 30)"
   :format-value (lambda (_widget value) (number-to-string value))
   :match (lambda (_widget value) (integerp value))
   :match-error-message (lambda (_widget _value)
                          "Value must be an integer")
   :prompt-value (lambda (_widget prompt _value _unbound) (read-number prompt)))
 
+;;;###autoload
 (define-widget 'bounded-int-field 'int-field
-  "A bounded integer field."
+  "An editable integer field with min/max bounds.
+
+Inherits all properties from `int-field'.
+
+Additional properties:
+  :min-value - minimum allowed value (default `most-negative-fixnum')
+  :max-value - maximum allowed value (default `most-positive-fixnum')
+
+Example:
+  (widget-create \\='bounded-int-field
+                 :tag \"Quantity:\"
+                 :value 5
+                 :min-value 0
+                 :max-value 100)"
   :min-value most-negative-fixnum
   :max-value most-positive-fixnum
   :match (lambda (widget value)
@@ -191,20 +307,42 @@
 
 ;;; * Numeric field
 
+;;;###autoload
 (define-widget 'numeric-field 'field
-  "A numeric field."
+  "An editable numeric field (integers or floats).
+
+Inherits all properties from `field'.
+Accepts any numeric value (integers or floating-point).
+
+Example:
+  (widget-create \\='numeric-field :tag \"Price:\" :value 19.99)"
   :format-value (lambda (_widget value) (number-to-string value))
   :match (lambda (_widget value) (numberp value))
   :match-error-message (lambda (_widget _value)
                          "Value must be a number")
   :prompt-value (lambda (_widget prompt _value _unbound) (read-number prompt)))
 
+;;;###autoload
 (define-widget 'bounded-numeric-field 'numeric-field
-  "A bounded numeric field."
+  "An editable numeric field with min/max bounds.
+
+Inherits all properties from `numeric-field'.
+
+Additional properties:
+  :min-value - minimum allowed value (default `most-negative-fixnum')
+  :max-value - maximum allowed value (default `most-positive-fixnum')
+
+Example:
+  (widget-create \\='bounded-numeric-field
+                 :tag \"Rating:\"
+                 :value 3.5
+                 :min-value 0.0
+                 :max-value 5.0)"
   :min-value most-negative-fixnum
   :max-value most-positive-fixnum
   :match (lambda (widget value)
-           (and (>= value (widget-get widget :min-value))
+           (and (numberp value)
+                (>= value (widget-get widget :min-value))
                 (<= value (widget-get widget :max-value))))
   :match-error-message (lambda (widget _value)
                          (format "Value must be a number in [%s, %s] range"
@@ -213,10 +351,27 @@
 
 ;;; * Fields group
 
+;;;###autoload
 (define-widget 'fields-group 'default
-  "Group multiple fields into one widget.
+  "Group multiple fields with automatic tag alignment.
 
-It automatically aligns values of the child fields."
+Child widgets are arranged vertically with their tags aligned.
+This creates a clean form-like appearance.
+
+Properties:
+  :extra-offset - additional spacing after aligned tags (default 1)
+
+Example:
+  (widget-create
+   \\='fields-group
+   (list \\='field :tag \"Name:\" :value \"Boris\")
+   (list \\='int-field :tag \"Age:\" :value 30)
+   (list \\='field :tag \"Email:\" :value \"boris@example.com\"))
+
+Result:
+  Name:  Boris
+  Age:   30
+  Email: boris@example.com"
   :convert-widget #'widget-types-convert-widget
   :copy #'widget-types-copy
   :format "%v"
@@ -250,14 +405,25 @@ Use MAX-TAG-LENGTH to calculate offset."
 
 ;;; * Horizontal choice
 
+;;;###autoload
 (define-widget 'horizontal-choice 'default
-  "Select one of multiple options in a horizontal layout.
+  "A horizontal tab/button group for selecting one option.
 
-This widget creates a buttons for each value in :values and uses
-horizontal layout to place them.
+Displays clickable buttons arranged horizontally. The selected
+button is deactivated (not clickable) while others remain active.
 
-The current value (as well as initial) is stored in :value property of
-the widget."
+Properties:
+  :values - list of available choices
+  :value  - currently selected value
+  :gap    - spacing between buttons (default 1)
+  :notify - function called when selection changes
+
+Example:
+  (widget-create \\='horizontal-choice
+                 :value \"plan\"
+                 :values \\='(\"plan\" \"scores\" \"settings\")
+                 :notify (lambda (widget &rest _)
+                           (message \"Selected: %s\" (widget-value widget))))"
   :convert-widget #'widget-types-convert-widget
   :copy #'widget-types-copy
   :gap 1
@@ -328,7 +494,7 @@ the widget."
   (widget-put widget :value nil)
   (widget-put widget :choice nil)
   (dolist (button (widget-get widget :buttons))
-    (if (string= (widget-get button :value) value)
+    (if (equal (widget-get button :value) value)
         (progn
           (widget-put widget :choice (widget-get button :index))
           (widget-put widget :value (widget-get button :value))
@@ -338,18 +504,46 @@ the widget."
 
 ;;; * Table widget
 
+;;;###autoload
 (define-widget 'table 'default
-  "A table widget.
+  "A table widget with rows, columns, and separators.
 
-Arguments are of types:
+Rows can contain any widget (preferably single-line).
+Columns are automatically aligned based on content width.
 
-- hline - an empty line/separator controlled by :hline-* properties; by
-  itself has not properties.
+Row types:
+  (hline)     - horizontal separator line
+  (row ...)   - data row containing child widgets
 
-- row - actual content of the table; controlled by :row-* properties.
-  Arguments are other widgets (multi-line widgets are not really
-  supported). The only extra property it supports is :padding-type to
-  override table :padding-type."
+Properties:
+  :row-start      - string before first column (default \"| \")
+  :row-conj       - string between columns (default \" | \")
+  :row-end        - string after last column (default \" |\")
+  :hline-start    - separator line start (default \"|-\")
+  :hline-conj     - separator between columns (default \"-+-\")
+  :hline-end      - separator line end (default \"-|\")
+  :hline-content  - character for separator (default ?-)
+  :padding        - padding character (default space)
+  :padding-type   - \\='right or \\='left, or alist of column->type
+  :truncate       - alist of column index to max width
+
+Example:
+  (widget-create
+   \\='table
+   \\='(hline)
+   \\='(row (label :value \"Name\") (label :value \"Age\"))
+   \\='(hline)
+   \\='(row (label :value \"Boris\") (numeric-label :value 30))
+   \\='(row (label :value \"Alice\") (numeric-label :value 25))
+   \\='(hline))
+
+Result:
+  |-------+-----|
+  | Name  | Age |
+  |-------+-----|
+  | Boris |  30 |
+  | Alice |  25 |
+  |-------+-----|"
   :convert-widget #'widget-types-convert-widget
   :copy #'widget-types-copy
   :format "%v"
@@ -470,12 +664,25 @@ Arguments are of types:
 
 ;;; * Buffer setup
 
+;;;###autoload
 (defmacro widget-buffer-setup (buffer-or-name &rest body)
   "Setup a clean buffer for widgets usage.
 
-Switches to BUFFER-OR-NAME and evaluate BODY.
+This macro handles all widget buffer initialization:
+1. Switches to BUFFER-OR-NAME (creating if needed)
+2. Clears all content and overlays
+3. Evaluates BODY (where you create widgets)
+4. Sets up widget keymap and finalizes widgets
+5. Moves point to beginning of buffer
 
-This macro takes care of all the initialisation, cleanup and setup."
+Example:
+  (widget-buffer-setup \"*my-app*\"
+    (widget-create \\='title \"My Application\")
+    (widget-create \\='heading-1 \"Settings\")
+    (widget-create
+     \\='fields-group
+     (list \\='field :tag \"Name:\" :value \"default\")
+     (list \\='int-field :tag \"Count:\" :value 0)))"
   (declare (debug (form body)) (indent 1))
   `(progn
      (switch-to-buffer ,buffer-or-name)
