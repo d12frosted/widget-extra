@@ -46,6 +46,11 @@
 ;;   - `numeric-field'         - any number field
 ;;   - `bounded-numeric-field' - number with min/max bounds
 ;;
+;; Buttons:
+;;   - `toggle-button' - toggles between on/off states
+;;   - `action-button' - triggers action without holding state
+;;   - `link-button'   - styled as link, opens URL/note/function
+;;
 ;; Layout widgets:
 ;;   - `fields-group'      - groups fields with automatic tag alignment
 ;;   - `horizontal-choice' - horizontal tabs/button group
@@ -348,6 +353,117 @@ Example:
                          (format "Value must be a number in [%s, %s] range"
                                  (number-to-string (widget-get widget :min-value))
                                  (number-to-string (widget-get widget :max-value)))))
+
+;;; * Toggle button
+
+;;;###autoload
+(define-widget 'toggle-button 'item
+  "A button that toggles between two states.
+
+Displays :on label when value is non-nil, :off otherwise.
+Clicking toggles the value and triggers :notify.
+
+Properties:
+  :on       - label when value is non-nil (default \"[X]\")
+  :off      - label when value is nil (default \"[ ]\")
+  :on-face  - face for on state (default nil)
+  :off-face - face for off state (default nil)
+  :value    - current boolean state
+  :notify   - function called when toggled
+
+Example:
+  (widget-create \\='toggle-button
+                 :on \"[X]\" :off \"[ ]\"
+                 :value t
+                 :notify (lambda (w &rest _)
+                           (message \"Now: %s\" (widget-value w))))"
+  :format "%[%v%]"
+  :on "[X]"
+  :off "[ ]"
+  :on-face nil
+  :off-face nil
+  :value nil
+  :value-create
+  (lambda (widget)
+    (let* ((value (widget-value widget))
+           (label (if value
+                      (widget-get widget :on)
+                    (widget-get widget :off)))
+           (face (if value
+                     (widget-get widget :on-face)
+                   (widget-get widget :off-face))))
+      (insert (if face (propertize label 'face face) label))))
+  :action
+  (lambda (widget &optional event)
+    (let ((new-value (not (widget-value widget))))
+      (widget-value-set widget new-value)
+      (widget-setup)
+      (widget-apply widget :notify widget event))))
+
+;;; * Action button
+
+;;;###autoload
+(define-widget 'action-button 'push-button
+  "A button that triggers an action without holding state.
+
+Use for actions like delete, add, refresh where no value is stored.
+The :action-data property can pass context to :notify.
+
+Properties:
+  :action-data - arbitrary data accessible in :notify via widget-get
+  :notify      - function called when clicked, receives (widget event)
+
+Example:
+  (widget-create \\='action-button
+                 :value \"Delete\"
+                 :action-data \\='(item-id . 42)
+                 :notify (lambda (w &rest _)
+                           (let ((data (widget-get w :action-data)))
+                             (message \"Delete: %S\" data))))"
+  :format "%[%v%]"
+  :action-data nil
+  :action
+  (lambda (widget &optional event)
+    (widget-apply widget :notify widget event)))
+
+;;; * Link button
+
+;;;###autoload
+(define-widget 'link-button 'push-button
+  "A button styled as a link that opens a target.
+
+Target can be:
+  - URL string (http/https): opens with `browse-url'
+  - vulpea-note: opens with `vulpea-visit' (if available)
+  - function: calls it with no arguments
+
+Properties:
+  :target - what to open when clicked
+  :value  - display text for the link
+
+Example:
+  (widget-create \\='link-button
+                 :value \"GitHub\"
+                 :target \"https://github.com\")
+
+  (widget-create \\='link-button
+                 :value \"Open note\"
+                 :target some-vulpea-note)"
+  :format "%[%v%]"
+  :button-face 'link
+  :target nil
+  :action
+  (lambda (widget &optional _event)
+    (let ((target (widget-get widget :target)))
+      (cond
+       ((and (fboundp 'vulpea-note-p)
+             (funcall 'vulpea-note-p target))
+        (funcall 'vulpea-visit target))
+       ((and (stringp target)
+             (string-match-p "^https?://" target))
+        (browse-url target))
+       ((functionp target)
+        (funcall target))))))
 
 ;;; * Fields group
 

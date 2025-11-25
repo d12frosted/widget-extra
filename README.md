@@ -155,6 +155,49 @@ A numeric field with min/max bounds.
                :max-value 5.0)
 ```
 
+### Buttons
+
+#### `toggle-button`
+
+A button that toggles between two states.
+
+```elisp
+(widget-create 'toggle-button
+               :on "[X]" :off "[ ]"
+               :value t
+               :notify (lambda (w &rest _)
+                         (message "Now: %s" (widget-value w))))
+```
+
+#### `action-button`
+
+A button that triggers an action without holding state. Useful for delete, add, or refresh actions.
+
+```elisp
+(widget-create 'action-button
+               :value "Delete"
+               :action-data '(item-id . 42)
+               :notify (lambda (w &rest _)
+                         (let ((data (widget-get w :action-data)))
+                           (message "Delete item: %S" data))))
+```
+
+#### `link-button`
+
+A button styled as a link that opens a target (URL, function, or vulpea-note).
+
+```elisp
+;; Open URL
+(widget-create 'link-button
+               :value "GitHub"
+               :target "https://github.com")
+
+;; Call function
+(widget-create 'link-button
+               :value "Do something"
+               :target (lambda () (message "Clicked!")))
+```
+
 ### Layout Widgets
 
 #### `fields-group`
