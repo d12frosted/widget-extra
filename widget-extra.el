@@ -115,7 +115,9 @@ Example:
     (let* ((s (widget-apply widget :format-value (widget-get widget :value)))
            (truncate (widget-get widget :truncate))
            (face (widget-get widget :face)))
-      (when (functionp face)
+      ;; Only call face as function if it's not a known face symbol
+      ;; (some face names like 'error are also function names)
+      (when (and (functionp face) (not (facep face)))
         (setq face (widget-apply widget :face (widget-get widget :value))))
       (insert (propertize (if truncate (s-truncate truncate s) s) 'face face)))))
 
@@ -412,6 +414,7 @@ The :action-data property can pass context to :notify.
 Properties:
   :action-data - arbitrary data accessible in :notify via widget-get
   :notify      - function called when clicked, receives (widget event)
+  :truncate    - max display length (nil for no truncation)
 
 Example:
   (widget-create \\='action-button
@@ -422,6 +425,13 @@ Example:
                              (message \"Delete: %S\" data))))"
   :format "%[%v%]"
   :action-data nil
+  :truncate nil
+  :value-create
+  (lambda (widget)
+    (let* ((value (widget-get widget :value))
+           (truncate (widget-get widget :truncate))
+           (tag (if truncate (s-truncate truncate value) value)))
+      (insert tag)))
   :action
   (lambda (widget &optional event)
     (widget-apply widget :notify widget event)))
@@ -438,8 +448,9 @@ Target can be:
   - function: calls it with no arguments
 
 Properties:
-  :target - what to open when clicked
-  :value  - display text for the link
+  :target   - what to open when clicked
+  :value    - display text for the link
+  :truncate - max display length (nil for no truncation)
 
 Example:
   (widget-create \\='link-button
@@ -452,6 +463,13 @@ Example:
   :format "%[%v%]"
   :button-face 'link
   :target nil
+  :truncate nil
+  :value-create
+  (lambda (widget)
+    (let* ((value (widget-get widget :value))
+           (truncate (widget-get widget :truncate))
+           (tag (if truncate (s-truncate truncate value) value)))
+      (insert tag)))
   :action
   (lambda (widget &optional _event)
     (let ((target (widget-get widget :target)))
@@ -620,6 +638,22 @@ Example:
 
 ;;; * Table widget
 
+(defun widget-table--update-spec-value (spec new-value)
+  "Return a copy of widget SPEC with :value set to NEW-VALUE.
+For menu-choice widgets, also updates :tag to match the new value
+so the display reflects the selection."
+  ;; Use copy-tree for deep copy to avoid corrupting original spec
+  (let ((copy (copy-tree spec)))
+    ;; (cdr copy) is the plist of properties after the widget type
+    (if (plist-member (cdr copy) :value)
+        (plist-put (cdr copy) :value new-value)
+      ;; Insert :value after the widget type
+      (setcdr copy (cons :value (cons new-value (cdr copy)))))
+    ;; For menu-choice, update :tag to match value for proper display
+    (when (eq (car copy) 'menu-choice)
+      (plist-put (cdr copy) :tag new-value))
+    copy))
+
 ;;;###autoload
 (define-widget 'table 'default
   "A table widget with rows, columns, and separators.
@@ -632,12 +666,12 @@ Row types:
   (row ...)   - data row containing child widgets
 
 Properties:
-  :row-start      - string before first column (default \"| \")
+  :row-start      - string before first column (default \"\")
   :row-conj       - string between columns (default \" | \")
-  :row-end        - string after last column (default \" |\")
-  :hline-start    - separator line start (default \"|-\")
+  :row-end        - string after last column (default \"\")
+  :hline-start    - separator line start (default \"\")
   :hline-conj     - separator between columns (default \"-+-\")
-  :hline-end      - separator line end (default \"-|\")
+  :hline-end      - separator line end (default \"\")
   :hline-content  - character for separator (default ?-)
   :padding        - padding character (default space)
   :padding-type   - \\='right or \\='left, or alist of column->type
@@ -646,43 +680,43 @@ Properties:
 Example:
   (widget-create
    \\='table
-   \\='(hline)
    \\='(row (label :value \"Name\") (label :value \"Age\"))
    \\='(hline)
    \\='(row (label :value \"Boris\") (numeric-label :value 30))
-   \\='(row (label :value \"Alice\") (numeric-label :value 25))
-   \\='(hline))
+   \\='(row (label :value \"Alice\") (numeric-label :value 25)))
 
 Result:
-  |-------+-----|
-  | Name  | Age |
-  |-------+-----|
-  | Boris |  30 |
-  | Alice |  25 |
-  |-------+-----|"
+  Name  | Age
+  ------+----
+  Boris |  30
+  Alice |  25"
   :convert-widget #'widget-types-convert-widget
   :copy #'widget-types-copy
   :format "%v"
-  :row-start "| "
+  :row-start ""
   :row-conj " | "
-  :row-end " |"
+  :row-end ""
   :padding ?\s
   ;; either a symbol (right or left) or alist of column index to padding type
   :padding-type 'right
   ;; either nil (unbounded or alist of column index to max width); works only with widgets that support :truncate
   ;; property
   :truncate nil
-  :hline-start "|-"
+  :hline-start ""
   :hline-content ?-
   :hline-conj "-+-"
-  :hline-end "-|"
+  :hline-end ""
   :value-create #'widget-table-value-create
   :notify (lambda (widget child &optional _event)
-            (let* ((child-new (widget-copy child))
-                   (row-index (widget-get child-new :row-index))
-                   (col-index (widget-get child-new :col-index))
+            (let* ((row-index (widget-get child :row-index))
+                   (col-index (widget-get child :col-index))
                    (child-from (marker-position (widget-get child :from)))
-                   (delta (when child-from (- (point) child-from))))
+                   (delta (when child-from (- (point) child-from)))
+                   (new-value (widget-value child))
+                   ;; Get the original spec from args and update its value
+                   (row (nth row-index (widget-get widget :args)))
+                   (original-spec (nth col-index (widget-get row :args)))
+                   (updated-spec (widget-table--update-spec-value original-spec new-value)))
               (widget-put
                widget :args
                (--update-at
@@ -690,7 +724,7 @@ Result:
                 (progn
                   (widget-put
                    it :args
-                   (-replace-at col-index child-new (widget-get it :args)))
+                   (-replace-at col-index updated-spec (widget-get it :args)))
                   it)
                 (widget-get widget :args)))
               (widget-default-value-set widget (widget-get widget :value))
@@ -737,8 +771,6 @@ Result:
              (lambda (col-index col)
                (unless (= 0 col-index)
                  (widget-insert (widget-get widget :row-conj)))
-               (widget-put col :row-index row-index)
-               (widget-put col :col-index col-index)
                (let* ((w (nth row-index (nth col-index widths)))
                       (mw (nth col-index max-widths))
                       (pad-type (or (widget-get row :padding-type)
@@ -748,11 +780,17 @@ Result:
                       (pad-type (or pad-type 'right))
                       (pad (- mw w))
                       (truncate (widget-get widget :truncate))
-                      (col (widget-copy col)))
+                      ;; Convert widget spec properly to handle compound widgets
+                      ;; like menu-choice that have nested :args needing conversion
+                      (col (apply #'widget-convert (car col) (cdr col))))
+                 (widget-put col :row-index row-index)
+                 (widget-put col :col-index col-index)
+                 (widget-put col :parent widget)
+                 (widget-put col :truncate (alist-get col-index truncate))
                  (when (and (> pad 0) (eq pad-type 'left))
                    (widget-insert (make-string pad (widget-get widget :padding))))
-                 (widget-put col :truncate (alist-get col-index truncate))
-                 (setq children (cons (widget-create-child widget col) children))
+                 (widget-apply col :create)
+                 (setq children (cons col children))
                  (when (and (> pad 0) (eq pad-type 'right))
                    (widget-insert (make-string pad (widget-get widget :padding)))))))
            (let ((cols-in-row (length (widget-get row :args))))

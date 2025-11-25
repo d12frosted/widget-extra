@@ -164,5 +164,37 @@
       (should-not (widget-apply widget :match -1))
       (should-not (widget-apply widget :match 101)))))
 
+;;; * Table tests
+
+(ert-deftest widget-extra-test-table-with-menu-choice ()
+  "Test table correctly handles menu-choice widget."
+  (with-widget-test-buffer
+    (let* ((selected nil)
+           (widget (widget-create
+                    'table
+                    '(row (label :value "Type:"))
+                    `(row (menu-choice
+                           :value "a"
+                           :tag "a"
+                           :format "%[%t%]"
+                           :notify (lambda (w &rest _)
+                                     (setq selected (widget-value w)))
+                           (choice-item :tag "a" :value "a")
+                           (choice-item :tag "b" :value "b")
+                           (choice-item :tag "c" :value "c"))))))
+      ;; Verify table was created
+      (should widget)
+      ;; Verify menu-choice child exists and has :args populated
+      (let ((children (widget-get widget :children)))
+        (should children)
+        ;; Find the menu-choice child
+        (let ((menu-choice-child (--find (eq (widget-type it) 'menu-choice) children)))
+          (should menu-choice-child)
+          ;; Verify :args were converted (should be widget objects, not raw specs)
+          (let ((args (widget-get menu-choice-child :args)))
+            (should args)
+            ;; Each arg should be a converted widget with :create method accessible
+            (should (>= (length args) 3))))))))
+
 (provide 'widget-extra-test)
 ;;; widget-extra-test.el ends here
