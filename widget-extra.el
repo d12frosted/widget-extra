@@ -195,6 +195,25 @@ Example:
   :format "%v\n"
   :face 'widget-heading-2)
 
+(defface widget-heading-3 '((t
+                             :height 1.1
+                             :weight semi-bold))
+  "Face used for level 3 heading."
+  :group 'widgets
+  :group 'faces)
+
+;;;###autoload
+(define-widget 'heading-3 'label
+  "A level 3 heading widget using `widget-heading-3' face.
+
+Displays text with semi-bold weight and 1.1x height.
+Automatically adds a newline after the value.
+
+Example:
+  (widget-create \\='heading-3 \"Sub-subsection Title\")"
+  :format "%v\n"
+  :face 'widget-heading-3)
+
 ;;; * Generic field
 
 ;;;###autoload
