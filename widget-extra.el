@@ -494,6 +494,7 @@ Example:
     (let ((target (widget-get widget :target)))
       (cond
        ((and (fboundp 'vulpea-note-p)
+             (fboundp 'vulpea-visit)
              (funcall 'vulpea-note-p target))
         (funcall 'vulpea-visit target))
        ((and (stringp target)
@@ -601,22 +602,22 @@ Example:
        (insert-char ?\s (widget-get widget :indent)))
   (widget-specify-insert
    (let* ((buttons (widget-get widget :buttons))
-	  (from (point))
+	        (from (point))
           (choice (widget-get widget :choice))
-	  (chosen (if choice
+	        (chosen (if choice
                       (= choice index)
                     (equal item (widget-get widget :value))))
           (gap (make-string (widget-get widget :gap) ?\s))
-	  button)
+	        button)
      (insert (widget-get widget :entry-format))
      (goto-char from)
      ;; Parse % escapes in format.
      (while (re-search-forward "%\\([v%]\\)" nil t)
        (let ((escape (char-after (match-beginning 1))))
-	 (delete-char -2)
-	 (cond ((eq escape ?%)
-		(insert ?%))
-	       ((eq escape ?v)
+	       (delete-char -2)
+	       (cond ((eq escape ?%)
+		            (insert ?%))
+	             ((eq escape ?v)
                 (setq button (widget-create-child
                               widget
                               (list
@@ -626,10 +627,10 @@ Example:
                                          (widget-horizontal-choice-value-set widget item))
                                :index index
                                :value item)))
-		(when chosen
-		  (widget-apply button :deactivate)))
-	       (t
-		(error "Unknown escape `%c'" escape)))))
+		            (when chosen
+		              (widget-apply button :deactivate)))
+	             (t
+		            (error "Unknown escape `%c'" escape)))))
      (when chosen
        (widget-put widget :choice index)
        (widget-put widget :value item))
@@ -652,7 +653,7 @@ Example:
           (widget-put widget :choice (widget-get button :index))
           (widget-put widget :value (widget-get button :value))
           (widget-apply button :deactivate))
-        (widget-apply button :activate)))
+      (widget-apply button :activate)))
   (widget-apply widget :notify))
 
 ;;; * Table widget
