@@ -2,55 +2,40 @@ name: CI
 
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    branches: [master]
 
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.experimental }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        emacs-version:
-          - 29.3
-        experimental: [false]
-        include:
-        - os: ubuntu-latest
-          emacs-version: snapshot
-          experimental: true
-        - os: macos-latest
-          emacs-version: snapshot
-          experimental: true
-        - os: windows-latest
-          emacs-version: snapshot
-          experimental: true
+        emacs_version:
+          - '29.4'
+          - '30.2'
 
     steps:
-    - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - uses: jcs090218/setup-emacs@master
-      with:
-        version: ${{ matrix.emacs-version }}
+      - name: Setup Emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
 
-    - name: Install Eldev
-      uses: emacs-eldev/setup-eldev@v1
+      - name: Setup Eldev
+        uses: emacs-eldev/setup-eldev@v1
 
-    - name: Install dependencies
-      run: make prepare
+      - name: Install dependencies
+        run: eldev prepare
 
-    - name: Lint
-      run: make lint
+      - name: Lint
+        run: eldev lint
 
-    - name: Compile
-      run: make compile
+      - name: Compile
+        run: eldev compile --warnings-as-errors
 
-    - name: Test
-      run: make test
+      - name: Test
+        run: eldev test
