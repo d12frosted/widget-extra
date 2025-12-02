@@ -2,6 +2,8 @@
 
 A collection of extra widgets that extend Emacs' built-in widget library, making it easier to build interactive buffer-based UIs.
 
+> **Note:** This library is functional and working, but is no longer under active development. I've shifted focus to [vui.el](https://github.com/d12frosted/vui.el), a declarative, component-based UI framework for Emacs inspired by React. It offers reactive state, hooks (`use-effect`, `use-memo`, etc.), context, and automatic re-rendering—built on top of `widget.el` but with a fundamentally different, more composable approach.
+
 ## Installation
 
 This package is not yet available on MELPA. Install it manually using your preferred package manager.
