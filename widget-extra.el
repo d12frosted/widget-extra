@@ -105,7 +105,7 @@ Example:
   (lambda (widget escape)
     ;; we support custom tag prefix (optional + offsets)
     (cond ((eq escape ?T)
-           (when-let ((tag (widget-get widget :tag)))
+           (when-let* ((tag (widget-get widget :tag)))
              (let ((offset (widget-get widget :offset)))
                (insert (propertize tag 'face (widget-get widget :tag-face))
                        (make-string offset (widget-get widget :padding))))))))
@@ -249,8 +249,8 @@ Example:
   (lambda (widget escape)
     ;; we support custom tag prefix (optional + offsets)
     (cond ((eq escape ?T)
-           (when-let ((tag (widget-get widget :tag))
-                      (offset (widget-get widget :offset)))
+           (when-let* ((tag (widget-get widget :tag))
+                       (offset (widget-get widget :offset)))
              (insert (propertize tag 'face (widget-get widget :tag-face))
                      (make-string offset (widget-get widget :padding)))))))
   :match (lambda (_widget _value) t)
@@ -640,7 +640,7 @@ Example:
 
 (defun widget-horizontal-choice-value-get (widget)
   "Get selected value of a horizontal choice WIDGET."
-  (if-let ((index (widget-get widget :choice)))
+  (if-let* ((index (widget-get widget :choice)))
       (nth index (widget-get widget :values))))
 
 (defun widget-horizontal-choice-value-set (widget value)
@@ -749,9 +749,9 @@ Result:
                 (widget-get widget :args)))
               (widget-default-value-set widget (widget-get widget :value))
               ;; properly move point after full recreation of table widget
-              (when-let ((child (--find (and (= row-index (widget-get it :row-index))
-                                             (= col-index (widget-get it :col-index)))
-                                        (widget-get widget :children))))
+              (when-let* ((child (--find (and (= row-index (widget-get it :row-index))
+                                              (= col-index (widget-get it :col-index)))
+                                         (widget-get widget :children))))
                 (when delta
                   (goto-char (+ (widget-get child :from) delta)))))))
 
@@ -772,10 +772,10 @@ Result:
                       (--map-indexed
                        (let ((max-width (alist-get it-index truncate)))
                          (--map
-                          (if-let ((length (when it
-                                             (with-temp-buffer
-                                               (widget-create it)
-                                               (- (point) 1)))))
+                          (if-let* ((length (when it
+                                              (with-temp-buffer
+                                                (widget-create it)
+                                                (- (point) 1)))))
                               (if max-width (min max-width length) length)
                             0)
                           it)))))
